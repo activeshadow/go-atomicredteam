@@ -43,3 +43,17 @@ bindata.go: $(INCLUDES) bin/go-bindata
 bin/atomicredteam: $(GOSOURCES) bindata.go
 	mkdir -p bin
 	CGO_ENABLED=0 GOOS=linux go build -a -ldflags="-X 'actshad.dev/go-atomicredteam.Version=$(VERSION)' -s -w" -trimpath -o bin/atomicredteam cmd/main.go
+
+bin/atomicredteam-linux: $(GOSOURCES) bindata.go
+	mkdir -p bin
+	CGO_ENABLED=0 GOOS=linux go build -a -ldflags="-X 'actshad.dev/go-atomicredteam.Version=$(VERSION)' -s -w" -trimpath -o bin/atomicredteam-linux cmd/main.go
+
+bin/atomicredteam-darwin: $(GOSOURCES) bindata.go
+	mkdir -p bin
+	CGO_ENABLED=0 GOOS=darwin go build -a -ldflags="-X 'actshad.dev/go-atomicredteam.Version=$(VERSION)' -s -w" -trimpath -o bin/atomicredteam-darwin cmd/main.go
+
+bin/atomicredteam-windows: $(GOSOURCES) bindata.go
+	mkdir -p bin
+	CGO_ENABLED=0 GOOS=windows go build -a -ldflags="-X 'actshad.dev/go-atomicredteam.Version=$(VERSION)' -s -w" -trimpath -o bin/atomicredteam-windows cmd/main.go
+
+release: bin/atomicredteam-linux bin/atomicredteam-darwin bin/atomicredteam-windows
