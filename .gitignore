@@ -1,4 +1,5 @@
 .devcontainer
 
-bin/
+bin
 bindata.go
+include/atomics
