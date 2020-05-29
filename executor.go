@@ -55,7 +55,7 @@ func Execute(tid, name, repo string, inputs []string) (*types.AtomicTest, error)
 		return nil, fmt.Errorf("executor %s is not supported", test.Executor.Name)
 	}
 
-	command, err := interpolateWithArgs(test.Executor.Command, args)
+	command, err := interpolateWithArgs(test.Executor, args)
 	if err != nil {
 		return nil, err
 	}
@@ -63,14 +63,16 @@ func Execute(tid, name, repo string, inputs []string) (*types.AtomicTest, error)
 	var results string
 
 	switch test.Executor.Name {
-	case "command_prompt":
-		results, err = executeCommandPrompt(test, command)
-	case "sh":
-		results, err = executeSh(test, command)
 	case "bash":
-		results, err = executeBash(test, command)
+		results, err = executeBash(command)
+	case "command_prompt":
+		results, err = executeCommandPrompt(command)
+	case "manual":
+		results, err = executeManual(command)
 	case "powershell":
-		results, err = executePowerShell(test, command)
+		results, err = executePowerShell(command)
+	case "sh":
+		results, err = executeSh(command)
 	}
 
 	if err != nil {
@@ -224,8 +226,16 @@ func checkPlatform(test *types.AtomicTest) error {
 	return nil
 }
 
-func interpolateWithArgs(interpolatee string, args map[string]string) (string, error) {
+func interpolateWithArgs(executor *types.AtomicExecutor, args map[string]string) (string, error) {
 	fmt.Println("\nInterpolating command with input arguments...")
+
+	var interpolatee string
+
+	if executor.Name == "manual" {
+		interpolatee = executor.Steps
+	} else {
+		interpolatee = executor.Command
+	}
 
 	interpolated := strings.TrimSpace(interpolatee)
 
@@ -237,7 +247,7 @@ func interpolateWithArgs(interpolatee string, args map[string]string) (string, e
 	return interpolated, nil
 }
 
-func executeCommandPrompt(test *types.AtomicTest, command string) (string, error) {
+func executeCommandPrompt(command string) (string, error) {
 	fmt.Printf("\nExecuting executor=cmd command=[%s]\n", command)
 
 	output, err := exec.Command("cmd.exe", "/c", command).CombinedOutput()
@@ -248,7 +258,7 @@ func executeCommandPrompt(test *types.AtomicTest, command string) (string, error
 	return string(output), nil
 }
 
-func executeSh(test *types.AtomicTest, command string) (string, error) {
+func executeSh(command string) (string, error) {
 	fmt.Printf("\nExecuting executor=sh command=[%s]\n", command)
 
 	output, err := exec.Command("sh", "-c", command).CombinedOutput()
@@ -259,7 +269,7 @@ func executeSh(test *types.AtomicTest, command string) (string, error) {
 	return string(output), nil
 }
 
-func executeBash(test *types.AtomicTest, command string) (string, error) {
+func executeBash(command string) (string, error) {
 	fmt.Printf("\nExecuting executor=bash command=[%s]\n", command)
 
 	output, err := exec.Command("bash", "-c", command).CombinedOutput()
@@ -270,7 +280,7 @@ func executeBash(test *types.AtomicTest, command string) (string, error) {
 	return string(output), nil
 }
 
-func executePowerShell(test *types.AtomicTest, command string) (string, error) {
+func executePowerShell(command string) (string, error) {
 	fmt.Printf("\nExecuting executor=powershell command=[%s]\n", command)
 
 	output, err := exec.Command("powershell", "-iex", command).CombinedOutput()
@@ -279,4 +289,18 @@ func executePowerShell(test *types.AtomicTest, command string) (string, error) {
 	}
 
 	return string(output), nil
+}
+
+func executeManual(command string) (string, error) {
+	fmt.Println("\nExecuting executor=manual command=[<see below>]")
+
+	steps := strings.Split(command, "\n")
+
+	fmt.Printf("\nThe following steps should be executed manually:\n\n")
+
+	for _, step := range steps {
+		fmt.Printf("    %s\n", step)
+	}
+
+	return command, nil
 }

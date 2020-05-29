@@ -64,7 +64,7 @@ func main() {
 
 			now := strings.ReplaceAll(time.Now().UTC().Format(time.RFC3339), ":", ".")
 
-			ioutil.WriteFile(fmt.Sprintf("atomic-test-executor-execution-%s.yaml", now), plan, 0644)
+			ioutil.WriteFile(fmt.Sprintf("atomic-test-executor-execution-%s-%s.yaml", tid, now), plan, 0644)
 
 			return nil
 		},
