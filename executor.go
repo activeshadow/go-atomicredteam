@@ -134,6 +134,8 @@ func Execute(tid, name string, index int, inputs []string) (*types.AtomicTest, e
 		return nil, err
 	}
 
+	fmt.Println("\nExecuting test...")
+
 	var results string
 
 	switch test.Executor.Name {
@@ -150,6 +152,13 @@ func Execute(tid, name string, index int, inputs []string) (*types.AtomicTest, e
 	}
 
 	if err != nil {
+		if results != "" {
+			fmt.Println("\nExecutor Failed:")
+			fmt.Println("**************************************************")
+			fmt.Println(results)
+			fmt.Println("**************************************************")
+		}
+
 		return nil, err
 	}
 
