@@ -16,12 +16,12 @@ import (
 )
 
 var (
-	LOCAL 	string
+	LOCAL   string
 	REPO    string
 	BUNDLED bool
 
 	AtomicsFolderRegex = regexp.MustCompile(`PathToAtomicsFolder(\\|\/)`)
-	BlockQuoteRegex = regexp.MustCompile(`<\/?blockquote>`)
+	BlockQuoteRegex    = regexp.MustCompile(`<\/?blockquote>`)
 )
 
 func Execute(tid, name string, index int, inputs []string) (*types.AtomicTest, error) {
@@ -30,12 +30,20 @@ func Execute(tid, name string, index int, inputs []string) (*types.AtomicTest, e
 		return nil, err
 	}
 
-	fmt.Println("***** EXECUTION PLAN IS *****")
-	fmt.Println(" Technique: " + tid)
-	fmt.Println(" Test:      " + test.Name)
-	fmt.Println(" Inputs:    " + strings.Join(inputs, "\n            "))
-	fmt.Println(" * Use at your own risk :) *")
-	fmt.Println("*****************************")
+	Println()
+
+	Println("****** EXECUTION PLAN ******")
+	Println(" Technique: " + tid)
+	Println(" Test:      " + test.Name)
+
+	if inputs == nil {
+		Println(" Inputs:    <none>")
+	} else {
+		Println(" Inputs:    " + strings.Join(inputs, "\n            "))
+	}
+
+	Println(" * Use at your own risk :) *")
+	Println("****************************")
 
 	args, err := checkArgsAndGetDefaults(test, inputs)
 	if err != nil {
@@ -60,44 +68,52 @@ func Execute(tid, name string, index int, inputs []string) (*types.AtomicTest, e
 			return nil, fmt.Errorf("dependency executor %s is not supported", test.DependencyExecutorName)
 		}
 
-		fmt.Printf("\nChecking dependencies...\n")
+		Printf("\nChecking dependencies...\n")
 
 		for _, dep := range test.Dependencies {
-			fmt.Printf("  - %s", dep.Description)
+			Printf("  - %s", dep.Description)
 
-			var	err error
+			command, err := interpolateWithArgs(dep.PrereqCommand, args, true)
+			if err != nil {
+				return nil, err
+			}
 
 			switch test.DependencyExecutorName {
 			case "bash":
-				_, err = executeBash(dep.PrereqCommand)
+				_, err = executeBash(command)
 			case "command_prompt":
-				_, err = executeCommandPrompt(dep.PrereqCommand)
+				_, err = executeCommandPrompt(command)
 			case "manual":
-				_, err = executeManual(dep.PrereqCommand)
+				_, err = executeManual(command)
 			case "powershell":
-				_, err = executePowerShell(dep.PrereqCommand)
+				_, err = executePowerShell(command)
 			case "sh":
-				_, err = executeSh(dep.PrereqCommand)
+				_, err = executeSh(command)
 			}
 
 			if err == nil {
-				fmt.Printf("   * OK - dependency check succeeded!\n")
+				Printf("   * OK - dependency check succeeded!\n")
 				continue
+			}
+
+			command, err = interpolateWithArgs(dep.GetPrereqCommand, args, true)
+			if err != nil {
+				return nil, err
 			}
 
 			var result string
 
 			switch test.DependencyExecutorName {
 			case "bash":
-				result, err = executeBash(dep.GetPrereqCommand)
+				result, err = executeBash(command)
 			case "command_prompt":
-				result, err = executeCommandPrompt(dep.GetPrereqCommand)
+				result, err = executeCommandPrompt(command)
 			case "manual":
-				result, err = executeManual(dep.GetPrereqCommand)
+				result, err = executeManual(command)
 			case "powershell":
-				result, err = executePowerShell(dep.GetPrereqCommand)
+				result, err = executePowerShell(command)
 			case "sh":
-				result, err = executeSh(dep.GetPrereqCommand)
+				result, err = executeSh(command)
 			}
 
 			if err != nil {
@@ -105,7 +121,7 @@ func Execute(tid, name string, index int, inputs []string) (*types.AtomicTest, e
 					result = "no details provided"
 				}
 
-				fmt.Printf("   * XX - dependency check failed: %s\n", result)
+				Printf("   * XX - dependency check failed: %s\n", result)
 
 				return nil, fmt.Errorf("not all dependency checks passed")
 			}
@@ -129,12 +145,20 @@ func Execute(tid, name string, index int, inputs []string) (*types.AtomicTest, e
 		return nil, fmt.Errorf("executor %s is not supported", test.Executor.Name)
 	}
 
-	command, err := interpolateWithArgs(test.Executor, args)
+	var interpolatee string
+
+	if test.Executor.Name == "manual" {
+		interpolatee = test.Executor.Steps
+	} else {
+		interpolatee = test.Executor.Command
+	}
+
+	command, err := interpolateWithArgs(interpolatee, args, false)
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Println("\nExecuting test...")
+	Println("\nExecuting test...\n")
 
 	var results string
 
@@ -153,19 +177,17 @@ func Execute(tid, name string, index int, inputs []string) (*types.AtomicTest, e
 
 	if err != nil {
 		if results != "" {
-			fmt.Println("\nExecutor Failed:")
-			fmt.Println("**************************************************")
-			fmt.Println(results)
-			fmt.Println("**************************************************")
+			Println("****** EXECUTOR FAILED ******")
+			Println(results)
+			Println("*****************************")
 		}
 
 		return nil, err
 	}
 
-	fmt.Println("\nExecutor Results:")
-	fmt.Println("**************************************************")
-	fmt.Println(results)
-	fmt.Println("**************************************************")
+	Println("****** EXECUTOR RESULTS ******")
+	Println(results)
+	Println("******************************")
 
 	for k, v := range test.InputArugments {
 		v.ExpectedValue = args[k]
@@ -375,14 +397,14 @@ func DumpTechnique(dir, tid string) (string, error) {
 }
 
 func getTest(tid, name string, index int) (*types.AtomicTest, error) {
-	fmt.Printf("\nGetting Atomic Tests technique %s from GitHub repo %s\n", tid, REPO)
+	Printf("\nGetting Atomic Tests technique %s from GitHub repo %s\n", tid, REPO)
 
 	technique, err := GetTechnique(tid)
 	if err != nil {
 		return nil, fmt.Errorf("getting Atomic Tests technique: %w", err)
 	}
 
-	fmt.Printf("  - technique has %d tests\n", len(technique.AtomicTests))
+	Printf("  - technique has %d tests\n", len(technique.AtomicTests))
 
 	var test *types.AtomicTest
 
@@ -401,7 +423,7 @@ func getTest(tid, name string, index int) (*types.AtomicTest, error) {
 		return nil, fmt.Errorf("could not find test %s/%s", tid, name)
 	}
 
-	fmt.Printf("  - found test named %s\n", test.Name)
+	Printf("  - found test named %s\n", test.Name)
 
 	return test, nil
 }
@@ -422,25 +444,25 @@ func checkArgsAndGetDefaults(test *types.AtomicTest, inputs []string) (map[strin
 		}
 	}
 
-	fmt.Println("\nChecking arguments...")
-	fmt.Println("  - supplied on command line: " + strings.Join(keys, ", "))
+	Println("\nChecking arguments...")
+	Println("  - supplied on command line: " + strings.Join(keys, ", "))
 
 	for k, v := range test.InputArugments {
-		fmt.Println("  - checking for argument " + k)
+		Println("  - checking for argument " + k)
 
 		val, ok := args[k]
 
 		if ok {
-			fmt.Println("   * OK - found argument in supplied args")
+			Println("   * OK - found argument in supplied args")
 		} else {
-			fmt.Println("   * XX not found, trying default arg")
+			Println("   * XX - not found, trying default arg")
 
 			val = v.Default
 
 			if val == "" {
 				return nil, fmt.Errorf("argument [%s] is required but not set and has no default", k)
 			} else {
-				fmt.Println("   * OK - found argument in defaults")
+				Println("   * OK - found argument in defaults")
 			}
 		}
 
@@ -466,7 +488,7 @@ func checkPlatform(test *types.AtomicTest) error {
 		return fmt.Errorf("unable to detect our platform")
 	}
 
-	fmt.Printf("\nChecking platform vs our platform (%s)...\n", platform)
+	Printf("\nChecking platform vs our platform (%s)...\n", platform)
 
 	var found bool
 
@@ -478,7 +500,7 @@ func checkPlatform(test *types.AtomicTest) error {
 	}
 
 	if found {
-		fmt.Println("  - OK - our platform is supported!")
+		Println("  - OK - our platform is supported!")
 	} else {
 		return fmt.Errorf("unable to run test that supports platforms %v because we are on %s", test.SupportedPlatforms, platform)
 	}
@@ -486,21 +508,20 @@ func checkPlatform(test *types.AtomicTest) error {
 	return nil
 }
 
-func interpolateWithArgs(executor *types.AtomicExecutor, args map[string]string) (string, error) {
-	fmt.Println("\nInterpolating command with input arguments...")
+func interpolateWithArgs(interpolatee string, args map[string]string, quiet bool) (string, error) {
+	prevQuiet := Quiet
+	Quiet = quiet
 
-	var interpolatee string
+	defer func() {
+		Quiet = prevQuiet
+	}()
 
-	if executor.Name == "manual" {
-		interpolatee = executor.Steps
-	} else {
-		interpolatee = executor.Command
-	}
+	Println("\nInterpolating command with input arguments...")
 
 	interpolated := strings.TrimSpace(interpolatee)
 
 	for k, v := range args {
-		fmt.Printf("  - interpolating [#{%s}] => [%s]\n", k, v)
+		Printf("  - interpolating [#{%s}] => [%s]\n", k, v)
 
 		if AtomicsFolderRegex.MatchString(v) {
 			dir, err := ioutil.TempDir("", "")
@@ -508,7 +529,7 @@ func interpolateWithArgs(executor *types.AtomicExecutor, args map[string]string)
 				return "", fmt.Errorf("creating temp directory for %s: %w", k, err)
 			}
 
-			fmt.Println("TEMP DIR: " + dir)
+			Println("TEMP DIR: " + dir)
 
 			v = AtomicsFolderRegex.ReplaceAllString(v, "")
 			v = strings.ReplaceAll(v, `\`, `/`)
@@ -528,7 +549,7 @@ func interpolateWithArgs(executor *types.AtomicExecutor, args map[string]string)
 }
 
 func executeCommandPrompt(command string) (string, error) {
-	// fmt.Printf("\nExecuting executor=cmd command=[%s]\n", command)
+	// Printf("\nExecuting executor=cmd command=[%s]\n", command)
 
 	output, err := exec.Command("cmd.exe", "/c", command).CombinedOutput()
 	if err != nil {
@@ -539,7 +560,7 @@ func executeCommandPrompt(command string) (string, error) {
 }
 
 func executeSh(command string) (string, error) {
-	// fmt.Printf("\nExecuting executor=sh command=[%s]\n", command)
+	// Printf("\nExecuting executor=sh command=[%s]\n", command)
 
 	output, err := exec.Command("sh", "-c", command).CombinedOutput()
 	if err != nil {
@@ -550,7 +571,7 @@ func executeSh(command string) (string, error) {
 }
 
 func executeBash(command string) (string, error) {
-	// fmt.Printf("\nExecuting executor=bash command=[%s]\n", command)
+	// Printf("\nExecuting executor=bash command=[%s]\n", command)
 
 	output, err := exec.Command("bash", "-c", command).CombinedOutput()
 	if err != nil {
@@ -561,7 +582,7 @@ func executeBash(command string) (string, error) {
 }
 
 func executePowerShell(command string) (string, error) {
-	// fmt.Printf("\nExecuting executor=powershell command=[%s]\n", command)
+	// Printf("\nExecuting executor=powershell command=[%s]\n", command)
 
 	args := []string{"-NoProfile", command}
 
@@ -574,14 +595,14 @@ func executePowerShell(command string) (string, error) {
 }
 
 func executeManual(command string) (string, error) {
-	// fmt.Println("\nExecuting executor=manual command=[<see below>]")
+	// Println("\nExecuting executor=manual command=[<see below>]")
 
 	steps := strings.Split(command, "\n")
 
-	fmt.Printf("\nThe following steps should be executed manually:\n\n")
+	Printf("\nThe following steps should be executed manually:\n\n")
 
 	for _, step := range steps {
-		fmt.Printf("    %s\n", step)
+		Printf("    %s\n", step)
 	}
 
 	return command, nil

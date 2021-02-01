@@ -6,13 +6,14 @@ import (
 	"io/ioutil"
 	"os"
 	"runtime"
-	"strings"
 	"sort"
+	"strings"
 	"time"
 
 	art "actshad.dev/go-atomicredteam"
 
 	"github.com/charmbracelet/glamour"
+	"github.com/muesli/termenv"
 	"github.com/urfave/cli/v2"
 	"gopkg.in/yaml.v3"
 )
@@ -37,7 +38,7 @@ func main() {
 				Name:    "index",
 				Aliases: []string{"i"},
 				Usage:   "test index",
-				Value: -1,
+				Value:   -1,
 			},
 			&cli.StringSliceFlag{
 				Name:  "input",
@@ -64,6 +65,11 @@ func main() {
 				Usage:   "format to use when writing results to file (json, yaml)",
 				Value:   "yaml",
 			},
+			&cli.BoolFlag{
+				Name:    "quiet",
+				Aliases: []string{"q"},
+				Usage:   "disable printing info to terminal when executing a test",
+			},
 		},
 		Action: func(ctx *cli.Context) error {
 			if art.REPO == "" {
@@ -76,14 +82,19 @@ func main() {
 				art.LOCAL = local
 			}
 
-			fmt.Println(string(art.MustAsset("logo.txt")))
-
 			var (
-				tid = ctx.String("technique")
-				name = ctx.String("name")
-				index = ctx.Int("index")
+				tid    = ctx.String("technique")
+				name   = ctx.String("name")
+				index  = ctx.Int("index")
 				inputs = ctx.StringSlice("input")
 			)
+
+			if tid != "" && (name != "" || index != -1) {
+				// Only honor --quiet flag if actually executing a test.
+				art.Quiet = ctx.Bool("quiet")
+			}
+
+			art.Println(string(art.MustAsset("logo.txt")))
 
 			if name != "" && index != -1 {
 				return cli.Exit("only provide one of 'name' or 'index' flags", 1)
@@ -157,10 +168,10 @@ func main() {
 						cli.Exit(err.Error(), 1)
 					}
 
-					fmt.Println("Locally Available Techniques:\n")
+					art.Println("Locally Available Techniques:\n")
 
 					for _, desc := range descriptions {
-						fmt.Println(desc)
+						art.Println(desc)
 					}
 
 					return nil
@@ -178,10 +189,10 @@ func main() {
 						cli.Exit(err.Error(), 1)
 					}
 
-					fmt.Println("Locally Available Techniques:\n")
+					art.Println("Locally Available Techniques:\n")
 
 					for _, desc := range descriptions {
-						fmt.Println(desc)
+						art.Println(desc)
 					}
 				}
 
@@ -193,7 +204,7 @@ func main() {
 
 				url := fmt.Sprintf("https://github.com/%s/atomic-red-team/tree/%s/atomics", orgBranch[0], orgBranch[1])
 
-				fmt.Printf("Please see %s for a list of available default techniques", url)
+				art.Printf("Please see %s for a list of available default techniques", url)
 
 				return nil
 			}
@@ -202,43 +213,53 @@ func main() {
 				if dump := ctx.String("dump-technique"); dump != "" {
 					dir, err := art.DumpTechnique(dump, tid)
 					if err != nil {
-						return cli.Exit("error dumping technique: " + err.Error(), 1)
+						return cli.Exit("error dumping technique: "+err.Error(), 1)
 					}
 
-					fmt.Printf("technique %s files dumped to %s", tid, dir)
+					art.Printf("technique %s files dumped to %s", tid, dir)
 
 					return nil
 				}
 
 				technique, err := art.GetTechnique(tid)
 				if err != nil {
-					return cli.Exit("error getting details for " + tid, 1)
+					return cli.Exit("error getting details for "+tid, 1)
 				}
 
-				fmt.Printf("Technique: %s - %s\n", technique.AttackTechnique, technique.DisplayName)
-				fmt.Println("Tests:")
+				art.Printf("Technique: %s - %s\n", technique.AttackTechnique, technique.DisplayName)
+				art.Println("Tests:")
 
 				for i, t := range technique.AtomicTests {
-					fmt.Printf("  %d. %s\n", i, t.Name)
+					art.Printf("  %d. %s\n", i, t.Name)
 				}
 
-				if runtime.GOOS != "windows" {
-					in, err := art.GetMarkdown(tid)
-					if err != nil {
-						return cli.Exit("error getting Markdown for " + tid, 1)
+				md, err := art.GetMarkdown(tid)
+				if err != nil {
+					return cli.Exit("error getting Markdown for "+tid, 1)
+				}
+
+				if runtime.GOOS == "windows" {
+					art.Println(string(md))
+				} else {
+					options := []glamour.TermRendererOption{glamour.WithWordWrap(100)}
+
+					if ctx.Bool("no-color") {
+						options = append(options, glamour.WithColorProfile(termenv.Ascii))
+					} else {
+						options = append(options, glamour.WithStylePath("dark"))
 					}
 
-					renderer, err := glamour.NewTermRenderer(glamour.WithStylePath("dark"), glamour.WithWordWrap(100))
+					renderer, err := glamour.NewTermRenderer(options...)
 					if err != nil {
 						return cli.Exit("error creating new Markdown renderer", 1)
 					}
 
-					out, err := renderer.RenderBytes(in)
+					out, err := renderer.RenderBytes(md)
 					if err != nil {
-						return cli.Exit("error rendering Markdown for " + tid, 1)
+						return cli.Exit("error rendering Markdown for "+tid, 1)
 					}
 
-					fmt.Print(string(out))
+					art.Print(string(out))
 				}
 
 				return nil
@@ -255,17 +276,18 @@ func main() {
 			)
 
 			switch ext {
-				case "json":
-					plan, _ = json.Marshal(test)
-				case "yaml":
-					plan, _ = yaml.Marshal(test)
-				default:
-					return cli.Exit("unknown results format provided", 1)
+			case "json":
+				plan, _ = json.Marshal(test)
+			case "yaml":
+				plan, _ = yaml.Marshal(test)
+			default:
+				return cli.Exit("unknown results format provided", 1)
 			}
 
 			out := ctx.String("results-file")
 
 			if out == "-" {
+				art.Println()
 				fmt.Println(string(plan))
 				return nil
 			}
@@ -293,9 +315,19 @@ func main() {
 		)
 	}
 
-	if err := app.Run(os.Args); err != nil {
-		fmt.Println(err)
+	if runtime.GOOS != "windows" {
+		app.Flags = append(
+			app.Flags,
+			&cli.BoolFlag{
+				Name:  "no-color",
+				Usage: "disable printing colors to terminal",
+			},
+		)
 	}
 
-	fmt.Println()
+	if err := app.Run(os.Args); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+	}
+
+	art.Println()
 }
