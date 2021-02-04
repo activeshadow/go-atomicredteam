@@ -8,7 +8,7 @@ DATE    := $(shell date -u)
 VERSION := $(VER) (commit $(COMMIT)) $(DATE)
 
 GOSOURCES := $(shell find . \( -name '*.go' \))
-INCLUDES  := $(shell find include \( -name '*' \))
+INCLUDES  := $(shell find include \( -name '*' \) | sed 's/ /\\ /g')
 
 # Default atomics repo to redcanaryco/master if not set at the command line.
 ATOMICS_REPO := $(or $(ATOMICS_REPO),redcanaryco/master)
