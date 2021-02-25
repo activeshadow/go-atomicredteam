@@ -94,7 +94,7 @@ func main() {
 				art.Quiet = ctx.Bool("quiet")
 			}
 
-			art.Println(string(art.MustAsset("logo.txt")))
+			art.Println(string(art.Logo()))
 
 			if name != "" && index != -1 {
 				return cli.Exit("only provide one of 'name' or 'index' flags", 1)
@@ -144,14 +144,8 @@ func main() {
 
 				if art.BUNDLED {
 					// Get bundled techniques first.
-					for _, asset := range art.AssetNames() {
-						tokens := strings.Split(asset, "/")
-
-						if tokens[0] == "atomics" {
-							if strings.HasPrefix(tokens[1], "T") {
-								filter[tokens[1]] = struct{}{}
-							}
-						}
+					for _, asset := range art.Techniques() {
+						filter[asset] = struct{}{}
 					}
 
 					// We want to get local techniques after getting bundled techniques so

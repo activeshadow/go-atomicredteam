@@ -27,37 +27,23 @@ export GOBIN
 all:
 
 clean:
-	-rm bin/go-bindata
 	-rm bin/atomicredteam*
 	-rm -rf include/atomics
 	-rm bindata.go
-
-.PHONY: install-build-deps
-install-build-deps: bin/go-bindata
-
-.PHONY: remove-build-deps
-remove-build-deps:
-	$(RM) bin/go-bindata
 
 .PHONY: download-atomics
 download-atomics:
 	./download-atomics.sh $(ATOMICS_REPO)
 
-bin/go-bindata:
-	go install github.com/go-bindata/go-bindata/v3/go-bindata
-
-bindata.go: $(INCLUDES) bin/go-bindata
-	$(GOBIN)/go-bindata -pkg atomicredteam -prefix include -o bindata.go include/...
-
-bin/goart-linux: $(GOSOURCES) download-atomics bindata.go
+bin/goart-linux: $(GOSOURCES) download-atomics
 	mkdir -p bin
 	CGO_ENABLED=0 GOOS=linux go build -a -ldflags="-X 'actshad.dev/go-atomicredteam.Version=$(VERSION)' -X 'actshad.dev/go-atomicredteam.REPO=$(ATOMICS_REPO)' -s -w" -trimpath -o bin/goart-linux cmd/main.go
 
-bin/goart-darwin: $(GOSOURCES) download-atomics bindata.go
+bin/goart-darwin: $(GOSOURCES) download-atomics
 	mkdir -p bin
 	CGO_ENABLED=0 GOOS=darwin go build -a -ldflags="-X 'actshad.dev/go-atomicredteam.Version=$(VERSION)' -X 'actshad.dev/go-atomicredteam.REPO=$(ATOMICS_REPO)' -s -w" -trimpath -o bin/goart-darwin cmd/main.go
 
-bin/goart-windows: $(GOSOURCES) download-atomics bindata.go
+bin/goart-windows: $(GOSOURCES) download-atomics
 	mkdir -p bin
 	CGO_ENABLED=0 GOOS=windows go build -a -ldflags="-X 'actshad.dev/go-atomicredteam.Version=$(VERSION)' -X 'actshad.dev/go-atomicredteam.REPO=$(ATOMICS_REPO)' -s -w" -trimpath -o bin/goart-windows cmd/main.go
 

@@ -2,26 +2,16 @@ package atomicredteam
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"strings"
 
 	"actshad.dev/go-atomicredteam/types"
 	"gopkg.in/yaml.v3"
-)
-
-var (
-	LOCAL   string
-	REPO    string
-	BUNDLED bool
-
-	AtomicsFolderRegex = regexp.MustCompile(`PathToAtomicsFolder(\\|\/)`)
-	BlockQuoteRegex    = regexp.MustCompile(`<\/?blockquote>`)
 )
 
 func Execute(tid, name string, index int, inputs []string) (*types.AtomicTest, error) {
@@ -212,9 +202,9 @@ func GetTechnique(tid string) (*types.Atomic, error) {
 	if LOCAL != "" {
 		// Check to see if test is defined locally first. If not, body will be nil
 		// and the test will be loaded below.
-		body, _ = ioutil.ReadFile(LOCAL + "/" + tid + "/" + tid + ".yaml")
+		body, _ = os.ReadFile(LOCAL + "/" + tid + "/" + tid + ".yaml")
 		if len(body) == 0 {
-			body, _ = ioutil.ReadFile(LOCAL + "/" + tid + "/" + tid + ".yml")
+			body, _ = os.ReadFile(LOCAL + "/" + tid + "/" + tid + ".yml")
 		}
 	}
 
@@ -222,9 +212,9 @@ func GetTechnique(tid string) (*types.Atomic, error) {
 		if BUNDLED {
 			var err error
 
-			body, err = Asset("atomics/" + tid + "/" + tid + ".yaml")
+			body, err = include.ReadFile("include/atomics/" + tid + "/" + tid + ".yaml")
 			if err != nil {
-				body, err = Asset("atomics/" + tid + "/" + tid + ".yml")
+				body, err = include.ReadFile("include/atomics/" + tid + "/" + tid + ".yml")
 				if err != nil {
 					return nil, fmt.Errorf("Atomic Test is not currently bundled")
 				}
@@ -245,7 +235,7 @@ func GetTechnique(tid string) (*types.Atomic, error) {
 
 			defer resp.Body.Close()
 
-			body, err = ioutil.ReadAll(resp.Body)
+			body, err = io.ReadAll(resp.Body)
 			if err != nil {
 				return nil, fmt.Errorf("reading Atomic Test from GitHub response: %w", err)
 			}
@@ -271,14 +261,14 @@ func GetMarkdown(tid string) ([]byte, error) {
 	if LOCAL != "" {
 		// Check to see if test is defined locally first. If not, body will be nil
 		// and the test will be loaded below.
-		body, _ = ioutil.ReadFile(LOCAL + "/" + tid + "/" + tid + ".md")
+		body, _ = os.ReadFile(LOCAL + "/" + tid + "/" + tid + ".md")
 	}
 
 	if len(body) == 0 {
 		if BUNDLED {
 			var err error
 
-			body, err = Asset("atomics/" + tid + "/" + tid + ".md")
+			body, err = include.ReadFile("include/atomics/" + tid + "/" + tid + ".md")
 			if err != nil {
 				return nil, fmt.Errorf("Atomic Test is not currently bundled")
 			}
@@ -298,7 +288,7 @@ func GetMarkdown(tid string) ([]byte, error) {
 
 			defer resp.Body.Close()
 
-			body, err = ioutil.ReadAll(resp.Body)
+			body, err = io.ReadAll(resp.Body)
 			if err != nil {
 				return nil, fmt.Errorf("reading Atomic Test from GitHub response: %w", err)
 			}
@@ -329,15 +319,15 @@ func DumpTechnique(dir, tid string) (string, error) {
 	if BUNDLED {
 		var err error
 
-		testBody, err = Asset("atomics/" + tid + "/" + tid + ".yaml")
+		testBody, err = include.ReadFile("include/atomics/" + tid + "/" + tid + ".yaml")
 		if err != nil {
-			testBody, err = Asset("atomics/" + tid + "/" + tid + ".yml")
+			testBody, err = include.ReadFile("include/atomics/" + tid + "/" + tid + ".yml")
 			if err != nil {
 				return "", fmt.Errorf("Atomic Test is not currently bundled")
 			}
 		}
 
-		mdBody, err = Asset("atomics/" + tid + "/" + tid + ".md")
+		mdBody, err = include.ReadFile("include/atomics/" + tid + "/" + tid + ".md")
 		if err != nil {
 			return "", fmt.Errorf("Atomic Test is not currently bundled")
 		}
@@ -357,7 +347,7 @@ func DumpTechnique(dir, tid string) (string, error) {
 
 		defer resp.Body.Close()
 
-		testBody, err = ioutil.ReadAll(resp.Body)
+		testBody, err = io.ReadAll(resp.Body)
 		if err != nil {
 			return "", fmt.Errorf("reading Atomic Test from GitHub response: %w", err)
 		}
@@ -371,7 +361,7 @@ func DumpTechnique(dir, tid string) (string, error) {
 
 		defer resp.Body.Close()
 
-		mdBody, err = ioutil.ReadAll(resp.Body)
+		mdBody, err = io.ReadAll(resp.Body)
 		if err != nil {
 			return "", fmt.Errorf("reading Atomic Test from GitHub response: %w", err)
 		}
@@ -384,12 +374,12 @@ func DumpTechnique(dir, tid string) (string, error) {
 	}
 
 	path := dir + "/" + tid + ".yaml"
-	if err := ioutil.WriteFile(path, testBody, 0644); err != nil {
+	if err := os.WriteFile(path, testBody, 0644); err != nil {
 		return "", fmt.Errorf("writing test configs for technique %s to %s: %w", tid, path, err)
 	}
 
 	path = dir + "/" + tid + ".md"
-	if err := ioutil.WriteFile(path, mdBody, 0644); err != nil {
+	if err := os.WriteFile(path, mdBody, 0644); err != nil {
 		return "", fmt.Errorf("writing test documentation for technique %s to %s: %w", tid, path, err)
 	}
 
@@ -524,7 +514,7 @@ func interpolateWithArgs(interpolatee string, args map[string]string, quiet bool
 		Printf("  - interpolating [#{%s}] => [%s]\n", k, v)
 
 		if AtomicsFolderRegex.MatchString(v) {
-			dir, err := ioutil.TempDir("", "")
+			dir, err := os.MkdirTemp("", "")
 			if err != nil {
 				return "", fmt.Errorf("creating temp directory for %s: %w", k, err)
 			}
@@ -535,11 +525,16 @@ func interpolateWithArgs(interpolatee string, args map[string]string, quiet bool
 			v = strings.ReplaceAll(v, `\`, `/`)
 			v = "atomics/" + v
 
-			if err := RestoreAsset(dir, v); err != nil {
-				return "", fmt.Errorf("restoring %s: %w", k, err)
+			body, err := include.ReadFile("include/ " + v)
+			if err != nil {
+				return "", fmt.Errorf("reading %s: %w", k, err)
 			}
 
 			v = filepath.FromSlash(dir + "/" + v)
+
+			if err := os.WriteFile(v, body, 0644); err != nil {
+				return "", fmt.Errorf("restoring %s: %w", k, err)
+			}
 		}
 
 		interpolated = strings.ReplaceAll(interpolated, "#{"+k+"}", v)
