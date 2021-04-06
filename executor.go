@@ -143,7 +143,7 @@ func Execute(tid, name string, index int, inputs []string) (*types.AtomicTest, e
 		interpolatee = test.Executor.Command
 	}
 
-	command, err := interpolateWithArgs(interpolatee, args, false)
+	command, err := interpolateWithArgs(interpolatee, args, true)
 	if err != nil {
 		return nil, err
 	}
@@ -546,7 +546,10 @@ func interpolateWithArgs(interpolatee string, args map[string]string, quiet bool
 func executeCommandPrompt(command string) (string, error) {
 	// Printf("\nExecuting executor=cmd command=[%s]\n", command)
 
-	output, err := exec.Command("cmd.exe", "/c", command).CombinedOutput()
+	cmd := exec.Command("cmd.exe", "/c", command)
+	cmd.Env = os.Environ()
+
+	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return string(output), fmt.Errorf("executing command via cmd.exe: %w", err)
 	}
@@ -557,7 +560,10 @@ func executeCommandPrompt(command string) (string, error) {
 func executeSh(command string) (string, error) {
 	// Printf("\nExecuting executor=sh command=[%s]\n", command)
 
-	output, err := exec.Command("sh", "-c", command).CombinedOutput()
+	cmd := exec.Command("sh", "-c", command)
+	cmd.Env = os.Environ()
+
+	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return string(output), fmt.Errorf("executing command via sh: %w", err)
 	}
@@ -568,7 +574,10 @@ func executeSh(command string) (string, error) {
 func executeBash(command string) (string, error) {
 	// Printf("\nExecuting executor=bash command=[%s]\n", command)
 
-	output, err := exec.Command("bash", "-c", command).CombinedOutput()
+	cmd := exec.Command("bash", "-c", command)
+	cmd.Env = os.Environ()
+
+	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return string(output), fmt.Errorf("executing command via bash: %w", err)
 	}
@@ -581,7 +590,10 @@ func executePowerShell(command string) (string, error) {
 
 	args := []string{"-NoProfile", command}
 
-	output, err := exec.Command("powershell", args...).CombinedOutput()
+	cmd := exec.Command("powershell", args...)
+	cmd.Env = os.Environ()
+
+	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return string(output), fmt.Errorf("executing command via powershell: %w", err)
 	}
@@ -594,10 +606,10 @@ func executeManual(command string) (string, error) {
 
 	steps := strings.Split(command, "\n")
 
-	Printf("\nThe following steps should be executed manually:\n\n")
+	fmt.Printf("\nThe following steps should be executed manually:\n\n")
 
 	for _, step := range steps {
-		Printf("    %s\n", step)
+		fmt.Printf("    %s\n", step)
 	}
 
 	return command, nil
