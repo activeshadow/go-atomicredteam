@@ -1,5 +1,5 @@
 .devcontainer
 
 bin
-bindata.go
 include/atomics
+include/custom

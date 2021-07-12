@@ -212,12 +212,8 @@ func GetTechnique(tid string) (*types.Atomic, error) {
 		if BUNDLED {
 			var err error
 
-			body, err = include.ReadFile("include/atomics/" + tid + "/" + tid + ".yaml")
-			if err != nil {
-				body, err = include.ReadFile("include/atomics/" + tid + "/" + tid + ".yml")
-				if err != nil {
-					return nil, fmt.Errorf("Atomic Test is not currently bundled")
-				}
+			if body, err = Technique(tid); err != nil {
+				return nil, err
 			}
 		} else {
 			orgBranch := strings.Split(REPO, "/")
@@ -268,9 +264,8 @@ func GetMarkdown(tid string) ([]byte, error) {
 		if BUNDLED {
 			var err error
 
-			body, err = include.ReadFile("include/atomics/" + tid + "/" + tid + ".md")
-			if err != nil {
-				return nil, fmt.Errorf("Atomic Test is not currently bundled")
+			if body, err = Markdown(tid); err != nil {
+				return nil, err
 			}
 		} else {
 			orgBranch := strings.Split(REPO, "/")
