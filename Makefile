@@ -27,9 +27,8 @@ export GOBIN
 all:
 
 clean:
-	-rm bin/atomicredteam*
+	-rm bin/goart*
 	-rm -rf include/atomics
-	-rm bindata.go
 
 .PHONY: download-atomics
 download-atomics:

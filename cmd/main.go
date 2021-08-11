@@ -44,6 +44,11 @@ func main() {
 				Name:  "input",
 				Usage: "input key=value pairs",
 			},
+			&cli.StringSliceFlag{
+				Name:    "env",
+				Aliases: []string{"e"},
+				Usage:   "env variable key=value pairs",
+			},
 			&cli.StringFlag{
 				Name:    "local-atomics-path",
 				Aliases: []string{"l"},
@@ -86,7 +91,8 @@ func main() {
 				tid    = ctx.String("technique")
 				name   = ctx.String("name")
 				index  = ctx.Int("index")
-				inputs = ctx.StringSlice("input")
+				inputs = art.ExpandStringSlice(ctx.StringSlice("input"))
+				env    = art.ExpandStringSlice(ctx.StringSlice("env"))
 			)
 
 			if tid != "" && (name != "" || index != -1) {
@@ -259,7 +265,7 @@ func main() {
 				return nil
 			}
 
-			test, err := art.Execute(tid, name, index, inputs)
+			test, err := art.Execute(tid, name, index, inputs, env)
 			if err != nil {
 				return cli.Exit(err, 1)
 			}

@@ -14,7 +14,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func Execute(tid, name string, index int, inputs []string) (*types.AtomicTest, error) {
+func Execute(tid, name string, index int, inputs []string, env []string) (*types.AtomicTest, error) {
 	test, err := getTest(tid, name, index)
 	if err != nil {
 		return nil, err
@@ -30,6 +30,12 @@ func Execute(tid, name string, index int, inputs []string) (*types.AtomicTest, e
 		Println(" Inputs:    <none>")
 	} else {
 		Println(" Inputs:    " + strings.Join(inputs, "\n            "))
+	}
+
+	if env == nil {
+		Println(" Env:       <none>")
+	} else {
+		Println(" Env:       " + strings.Join(env, "\n            "))
 	}
 
 	Println(" * Use at your own risk :) *")
@@ -70,15 +76,15 @@ func Execute(tid, name string, index int, inputs []string) (*types.AtomicTest, e
 
 			switch test.DependencyExecutorName {
 			case "bash":
-				_, err = executeBash(command)
+				_, err = executeBash(command, env)
 			case "command_prompt":
-				_, err = executeCommandPrompt(command)
+				_, err = executeCommandPrompt(command, env)
 			case "manual":
 				_, err = executeManual(command)
 			case "powershell":
-				_, err = executePowerShell(command)
+				_, err = executePowerShell(command, env)
 			case "sh":
-				_, err = executeSh(command)
+				_, err = executeSh(command, env)
 			}
 
 			if err == nil {
@@ -95,15 +101,15 @@ func Execute(tid, name string, index int, inputs []string) (*types.AtomicTest, e
 
 			switch test.DependencyExecutorName {
 			case "bash":
-				result, err = executeBash(command)
+				result, err = executeBash(command, env)
 			case "command_prompt":
-				result, err = executeCommandPrompt(command)
+				result, err = executeCommandPrompt(command, env)
 			case "manual":
 				result, err = executeManual(command)
 			case "powershell":
-				result, err = executePowerShell(command)
+				result, err = executePowerShell(command, env)
 			case "sh":
-				result, err = executeSh(command)
+				result, err = executeSh(command, env)
 			}
 
 			if err != nil {
@@ -154,15 +160,15 @@ func Execute(tid, name string, index int, inputs []string) (*types.AtomicTest, e
 
 	switch test.Executor.Name {
 	case "bash":
-		results, err = executeBash(command)
+		results, err = executeBash(command, env)
 	case "command_prompt":
-		results, err = executeCommandPrompt(command)
+		results, err = executeCommandPrompt(command, env)
 	case "manual":
 		results, err = executeManual(command)
 	case "powershell":
-		results, err = executePowerShell(command)
+		results, err = executePowerShell(command, env)
 	case "sh":
-		results, err = executeSh(command)
+		results, err = executeSh(command, env)
 	}
 
 	if err != nil {
@@ -314,17 +320,12 @@ func DumpTechnique(dir, tid string) (string, error) {
 	if BUNDLED {
 		var err error
 
-		testBody, err = include.ReadFile("include/atomics/" + tid + "/" + tid + ".yaml")
-		if err != nil {
-			testBody, err = include.ReadFile("include/atomics/" + tid + "/" + tid + ".yml")
-			if err != nil {
-				return "", fmt.Errorf("Atomic Test is not currently bundled")
-			}
+		if testBody, err = Technique(tid); err != nil {
+			return "", err
 		}
 
-		mdBody, err = include.ReadFile("include/atomics/" + tid + "/" + tid + ".md")
-		if err != nil {
-			return "", fmt.Errorf("Atomic Test is not currently bundled")
+		if mdBody, err = Markdown(tid); err != nil {
+			return "", err
 		}
 	} else {
 		orgBranch := strings.Split(REPO, "/")
@@ -538,11 +539,11 @@ func interpolateWithArgs(interpolatee string, args map[string]string, quiet bool
 	return interpolated, nil
 }
 
-func executeCommandPrompt(command string) (string, error) {
+func executeCommandPrompt(command string, env []string) (string, error) {
 	// Printf("\nExecuting executor=cmd command=[%s]\n", command)
 
 	cmd := exec.Command("cmd.exe", "/c", command)
-	cmd.Env = os.Environ()
+	cmd.Env = append(os.Environ(), env...)
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -552,11 +553,11 @@ func executeCommandPrompt(command string) (string, error) {
 	return string(output), nil
 }
 
-func executeSh(command string) (string, error) {
+func executeSh(command string, env []string) (string, error) {
 	// Printf("\nExecuting executor=sh command=[%s]\n", command)
 
 	cmd := exec.Command("sh", "-c", command)
-	cmd.Env = os.Environ()
+	cmd.Env = append(os.Environ(), env...)
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -566,11 +567,11 @@ func executeSh(command string) (string, error) {
 	return string(output), nil
 }
 
-func executeBash(command string) (string, error) {
+func executeBash(command string, env []string) (string, error) {
 	// Printf("\nExecuting executor=bash command=[%s]\n", command)
 
 	cmd := exec.Command("bash", "-c", command)
-	cmd.Env = os.Environ()
+	cmd.Env = append(os.Environ(), env...)
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -580,13 +581,13 @@ func executeBash(command string) (string, error) {
 	return string(output), nil
 }
 
-func executePowerShell(command string) (string, error) {
+func executePowerShell(command string, env []string) (string, error) {
 	// Printf("\nExecuting executor=powershell command=[%s]\n", command)
 
 	args := []string{"-NoProfile", command}
 
 	cmd := exec.Command("powershell", args...)
-	cmd.Env = os.Environ()
+	cmd.Env = append(os.Environ(), env...)
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
