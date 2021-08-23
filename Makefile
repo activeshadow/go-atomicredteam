@@ -34,16 +34,16 @@ clean:
 download-atomics:
 	./download-atomics.sh $(ATOMICS_REPO)
 
-bin/goart-linux: $(GOSOURCES) download-atomics
+bin/goart: $(GOSOURCES) download-atomics
 	mkdir -p bin
-	CGO_ENABLED=0 GOOS=linux go build -a -ldflags="-X 'actshad.dev/go-atomicredteam.Version=$(VERSION)' -X 'actshad.dev/go-atomicredteam.REPO=$(ATOMICS_REPO)' -s -w" -trimpath -o bin/goart-linux cmd/main.go
+	CGO_ENABLED=0 GOOS=linux go build -a -ldflags="-X 'actshad.dev/go-atomicredteam.Version=$(VERSION)' -X 'actshad.dev/go-atomicredteam.REPO=$(ATOMICS_REPO)' -s -w" -trimpath -o bin/goart cmd/main.go
 
 bin/goart-darwin: $(GOSOURCES) download-atomics
 	mkdir -p bin
 	CGO_ENABLED=0 GOOS=darwin go build -a -ldflags="-X 'actshad.dev/go-atomicredteam.Version=$(VERSION)' -X 'actshad.dev/go-atomicredteam.REPO=$(ATOMICS_REPO)' -s -w" -trimpath -o bin/goart-darwin cmd/main.go
 
-bin/goart-windows: $(GOSOURCES) download-atomics
+bin/goart.exe: $(GOSOURCES) download-atomics
 	mkdir -p bin
-	CGO_ENABLED=0 GOOS=windows go build -a -ldflags="-X 'actshad.dev/go-atomicredteam.Version=$(VERSION)' -X 'actshad.dev/go-atomicredteam.REPO=$(ATOMICS_REPO)' -s -w" -trimpath -o bin/goart-windows cmd/main.go
+	CGO_ENABLED=0 GOOS=windows go build -a -ldflags="-X 'actshad.dev/go-atomicredteam.Version=$(VERSION)' -X 'actshad.dev/go-atomicredteam.REPO=$(ATOMICS_REPO)' -s -w" -trimpath -o bin/goart.exe cmd/main.go
 
-release: bin/goart-linux bin/goart-darwin bin/goart-windows
+release: bin/goart bin/goart-darwin bin/goart.exe

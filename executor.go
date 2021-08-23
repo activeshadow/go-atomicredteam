@@ -542,12 +542,29 @@ func interpolateWithArgs(interpolatee string, args map[string]string, quiet bool
 func executeCommandPrompt(command string, env []string) (string, error) {
 	// Printf("\nExecuting executor=cmd command=[%s]\n", command)
 
-	cmd := exec.Command("cmd.exe", "/c", command)
+	f, err := os.CreateTemp("", "goart-*.bat")
+	if err != nil {
+		return "", fmt.Errorf("creating temporary file: %w", err)
+	}
+
+	defer os.Remove(f.Name())
+
+	if _, err := f.Write([]byte(command)); err != nil {
+		f.Close()
+
+		return "", fmt.Errorf("writing command to file: %w", err)
+	}
+
+	if err := f.Close(); err != nil {
+		return "", fmt.Errorf("closing batch file: %w", err)
+	}
+
+	cmd := exec.Command("cmd.exe", "/c", f.Name())
 	cmd.Env = append(os.Environ(), env...)
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return string(output), fmt.Errorf("executing command via cmd.exe: %w", err)
+		return string(output), fmt.Errorf("executing batch file: %w", err)
 	}
 
 	return string(output), nil
@@ -556,12 +573,29 @@ func executeCommandPrompt(command string, env []string) (string, error) {
 func executeSh(command string, env []string) (string, error) {
 	// Printf("\nExecuting executor=sh command=[%s]\n", command)
 
-	cmd := exec.Command("sh", "-c", command)
+	f, err := os.CreateTemp("", "goart-*.sh")
+	if err != nil {
+		return "", fmt.Errorf("creating temporary file: %w", err)
+	}
+
+	defer os.Remove(f.Name())
+
+	if _, err := f.Write([]byte(command)); err != nil {
+		f.Close()
+
+		return "", fmt.Errorf("writing command to file: %w", err)
+	}
+
+	if err := f.Close(); err != nil {
+		return "", fmt.Errorf("closing shell script: %w", err)
+	}
+
+	cmd := exec.Command("sh", f.Name())
 	cmd.Env = append(os.Environ(), env...)
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return string(output), fmt.Errorf("executing command via sh: %w", err)
+		return string(output), fmt.Errorf("executing shell script: %w", err)
 	}
 
 	return string(output), nil
@@ -570,12 +604,29 @@ func executeSh(command string, env []string) (string, error) {
 func executeBash(command string, env []string) (string, error) {
 	// Printf("\nExecuting executor=bash command=[%s]\n", command)
 
-	cmd := exec.Command("bash", "-c", command)
+	f, err := os.CreateTemp("", "goart-*.bash")
+	if err != nil {
+		return "", fmt.Errorf("creating temporary file: %w", err)
+	}
+
+	defer os.Remove(f.Name())
+
+	if _, err := f.Write([]byte(command)); err != nil {
+		f.Close()
+
+		return "", fmt.Errorf("writing command to file: %w", err)
+	}
+
+	if err := f.Close(); err != nil {
+		return "", fmt.Errorf("closing bash script: %w", err)
+	}
+
+	cmd := exec.Command("bash", f.Name())
 	cmd.Env = append(os.Environ(), env...)
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return string(output), fmt.Errorf("executing command via bash: %w", err)
+		return string(output), fmt.Errorf("executing bash script: %w", err)
 	}
 
 	return string(output), nil
@@ -584,14 +635,29 @@ func executeBash(command string, env []string) (string, error) {
 func executePowerShell(command string, env []string) (string, error) {
 	// Printf("\nExecuting executor=powershell command=[%s]\n", command)
 
-	args := []string{"-NoProfile", command}
+	f, err := os.CreateTemp("", "goart-*.ps1")
+	if err != nil {
+		return "", fmt.Errorf("creating temporary file: %w", err)
+	}
 
-	cmd := exec.Command("powershell", args...)
+	defer os.Remove(f.Name())
+
+	if _, err := f.Write([]byte(command)); err != nil {
+		f.Close()
+
+		return "", fmt.Errorf("writing command to file: %w", err)
+	}
+
+	if err := f.Close(); err != nil {
+		return "", fmt.Errorf("closing PowerShell script: %w", err)
+	}
+
+	cmd := exec.Command("powershell", "-NoProfile", f.Name())
 	cmd.Env = append(os.Environ(), env...)
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return string(output), fmt.Errorf("executing command via powershell: %w", err)
+		return string(output), fmt.Errorf("executing PowerShell script: %w", err)
 	}
 
 	return string(output), nil
