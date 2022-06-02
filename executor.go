@@ -69,7 +69,7 @@ func Execute(tid, name string, index int, inputs []string, env []string) (*types
 		for _, dep := range test.Dependencies {
 			Printf("  - %s", dep.Description)
 
-			command, err := interpolateWithArgs(dep.PrereqCommand, args, true)
+			command, err := interpolateWithArgs(dep.PrereqCommand, test.BaseDir, args, true)
 			if err != nil {
 				return nil, err
 			}
@@ -92,7 +92,7 @@ func Execute(tid, name string, index int, inputs []string, env []string) (*types
 				continue
 			}
 
-			command, err = interpolateWithArgs(dep.GetPrereqCommand, args, true)
+			command, err = interpolateWithArgs(dep.GetPrereqCommand, test.BaseDir, args, true)
 			if err != nil {
 				return nil, err
 			}
@@ -149,7 +149,7 @@ func Execute(tid, name string, index int, inputs []string, env []string) (*types
 		interpolatee = test.Executor.Command
 	}
 
-	command, err := interpolateWithArgs(interpolatee, args, true)
+	command, err := interpolateWithArgs(interpolatee, test.BaseDir, args, false)
 	if err != nil {
 		return nil, err
 	}
@@ -214,34 +214,51 @@ func GetTechnique(tid string) (*types.Atomic, error) {
 		}
 	}
 
-	if len(body) == 0 {
-		if BUNDLED {
-			var err error
+	if len(body) != 0 {
+		var technique types.Atomic
 
-			if body, err = Technique(tid); err != nil {
-				return nil, err
-			}
-		} else {
-			orgBranch := strings.Split(REPO, "/")
-
-			if len(orgBranch) != 2 {
-				return nil, fmt.Errorf("repo must be in format <org>/<branch> (name of repo in <org> must be 'atomic-red-team')")
-			}
-
-			url := fmt.Sprintf("https://raw.githubusercontent.com/%s/atomic-red-team/%s/atomics/%s/%s.yaml", orgBranch[0], orgBranch[1], tid, tid)
-
-			resp, err := http.Get(url)
-			if err != nil {
-				return nil, fmt.Errorf("getting Atomic Test from GitHub: %w", err)
-			}
-
-			defer resp.Body.Close()
-
-			body, err = io.ReadAll(resp.Body)
-			if err != nil {
-				return nil, fmt.Errorf("reading Atomic Test from GitHub response: %w", err)
-			}
+		if err := yaml.Unmarshal(body, &technique); err != nil {
+			return nil, fmt.Errorf("processing Atomic Test YAML file: %w", err)
 		}
+
+		technique.BaseDir = LOCAL
+		return &technique, nil
+	}
+
+	if BUNDLED {
+		body, base, err := Technique(tid)
+		if err != nil {
+			return nil, err
+		}
+
+		var technique types.Atomic
+
+		if err := yaml.Unmarshal(body, &technique); err != nil {
+			return nil, fmt.Errorf("processing Atomic Test YAML file: %w", err)
+		}
+
+		technique.BaseDir = base
+		return &technique, nil
+	}
+
+	orgBranch := strings.Split(REPO, "/")
+
+	if len(orgBranch) != 2 {
+		return nil, fmt.Errorf("repo must be in format <org>/<branch> (name of repo in <org> must be 'atomic-red-team')")
+	}
+
+	url := fmt.Sprintf("https://raw.githubusercontent.com/%s/atomic-red-team/%s/atomics/%s/%s.yaml", orgBranch[0], orgBranch[1], tid, tid)
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("getting Atomic Test from GitHub: %w", err)
+	}
+
+	defer resp.Body.Close()
+
+	body, err = io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("reading Atomic Test from GitHub response: %w", err)
 	}
 
 	var technique types.Atomic
@@ -317,10 +334,12 @@ func DumpTechnique(dir, tid string) (string, error) {
 	// We don't check for locally defined techniques here since it makes no sense
 	// to dump them to file when they're already present locally.
 
+	// TODO: also dump any additional files bundled with techniques.
+
 	if BUNDLED {
 		var err error
 
-		if testBody, err = Technique(tid); err != nil {
+		if testBody, _, err = Technique(tid); err != nil {
 			return "", err
 		}
 
@@ -409,6 +428,8 @@ func getTest(tid, name string, index int) (*types.AtomicTest, error) {
 		return nil, fmt.Errorf("could not find test %s/%s", tid, name)
 	}
 
+	test.BaseDir = technique.BaseDir
+
 	Printf("  - found test named %s\n", test.Name)
 
 	return test, nil
@@ -494,7 +515,7 @@ func checkPlatform(test *types.AtomicTest) error {
 	return nil
 }
 
-func interpolateWithArgs(interpolatee string, args map[string]string, quiet bool) (string, error) {
+func interpolateWithArgs(interpolatee, base string, args map[string]string, quiet bool) (string, error) {
 	prevQuiet := Quiet
 	Quiet = quiet
 
@@ -510,26 +531,28 @@ func interpolateWithArgs(interpolatee string, args map[string]string, quiet bool
 		Printf("  - interpolating [#{%s}] => [%s]\n", k, v)
 
 		if AtomicsFolderRegex.MatchString(v) {
-			dir, err := os.MkdirTemp("", "")
-			if err != nil {
-				return "", fmt.Errorf("creating temp directory for %s: %w", k, err)
-			}
-
-			Println("TEMP DIR: " + dir)
+			Println("TEMP DIR: " + TEMPDIR)
 
 			v = AtomicsFolderRegex.ReplaceAllString(v, "")
 			v = strings.ReplaceAll(v, `\`, `/`)
-			v = "atomics/" + v
+			v = strings.TrimSuffix(base, "/") + "/" + v
 
-			body, err := include.ReadFile("include/ " + v)
-			if err != nil {
-				return "", fmt.Errorf("reading %s: %w", k, err)
-			}
+			// TODO: handle requesting file from GitHub repo if not bundled.
+			if base != LOCAL {
+				body, err := include.ReadFile(v)
+				if err != nil {
+					return "", fmt.Errorf("reading %s: %w", k, err)
+				}
 
-			v = filepath.FromSlash(dir + "/" + v)
+				v = filepath.FromSlash(TEMPDIR + "/" + v)
 
-			if err := os.WriteFile(v, body, 0644); err != nil {
-				return "", fmt.Errorf("restoring %s: %w", k, err)
+				if err := os.MkdirAll(filepath.Dir(v), 0700); err != nil {
+					return "", fmt.Errorf("creating directory structure for %s: %w", k, err)
+				}
+
+				if err := os.WriteFile(v, body, 0644); err != nil {
+					return "", fmt.Errorf("restoring %s: %w", k, err)
+				}
 			}
 		}
 
@@ -542,12 +565,10 @@ func interpolateWithArgs(interpolatee string, args map[string]string, quiet bool
 func executeCommandPrompt(command string, env []string) (string, error) {
 	// Printf("\nExecuting executor=cmd command=[%s]\n", command)
 
-	f, err := os.CreateTemp("", "goart-*.bat")
+	f, err := os.Create(TEMPDIR + "/goart.bat")
 	if err != nil {
 		return "", fmt.Errorf("creating temporary file: %w", err)
 	}
-
-	defer os.Remove(f.Name())
 
 	if _, err := f.Write([]byte(command)); err != nil {
 		f.Close()
@@ -573,12 +594,10 @@ func executeCommandPrompt(command string, env []string) (string, error) {
 func executeSh(command string, env []string) (string, error) {
 	// Printf("\nExecuting executor=sh command=[%s]\n", command)
 
-	f, err := os.CreateTemp("", "goart-*.sh")
+	f, err := os.Create(TEMPDIR + "/goart.sh")
 	if err != nil {
 		return "", fmt.Errorf("creating temporary file: %w", err)
 	}
-
-	defer os.Remove(f.Name())
 
 	if _, err := f.Write([]byte(command)); err != nil {
 		f.Close()
@@ -604,12 +623,10 @@ func executeSh(command string, env []string) (string, error) {
 func executeBash(command string, env []string) (string, error) {
 	// Printf("\nExecuting executor=bash command=[%s]\n", command)
 
-	f, err := os.CreateTemp("", "goart-*.bash")
+	f, err := os.Create(TEMPDIR + "/goart.bash")
 	if err != nil {
 		return "", fmt.Errorf("creating temporary file: %w", err)
 	}
-
-	defer os.Remove(f.Name())
 
 	if _, err := f.Write([]byte(command)); err != nil {
 		f.Close()
@@ -635,12 +652,10 @@ func executeBash(command string, env []string) (string, error) {
 func executePowerShell(command string, env []string) (string, error) {
 	// Printf("\nExecuting executor=powershell command=[%s]\n", command)
 
-	f, err := os.CreateTemp("", "goart-*.ps1")
+	f, err := os.Create(TEMPDIR + "/goart.ps1")
 	if err != nil {
 		return "", fmt.Errorf("creating temporary file: %w", err)
 	}
-
-	defer os.Remove(f.Name())
 
 	if _, err := f.Write([]byte(command)); err != nil {
 		f.Close()

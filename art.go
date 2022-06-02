@@ -11,6 +11,7 @@ var (
 	LOCAL   string
 	REPO    string
 	BUNDLED bool
+	TEMPDIR string
 
 	AtomicsFolderRegex = regexp.MustCompile(`PathToAtomicsFolder(\\|\/)`)
 	BlockQuoteRegex    = regexp.MustCompile(`<\/?blockquote>`)
@@ -56,28 +57,25 @@ func Techniques() []string {
 	return techniques
 }
 
-func Technique(tid string) ([]byte, error) {
-	var (
-		body []byte
-		err  error
-	)
-
+func Technique(tid string) ([]byte, string, error) {
 	// Check for a custom atomic first, then public.
-	body, err = include.ReadFile("include/custom/" + tid + "/" + tid + ".yaml")
-	if err != nil {
-		body, err = include.ReadFile("include/custom/" + tid + "/" + tid + ".yml")
-		if err != nil {
-			body, err = include.ReadFile("include/atomics/" + tid + "/" + tid + ".yaml")
-			if err != nil {
-				body, err = include.ReadFile("include/atomics/" + tid + "/" + tid + ".yml")
-				if err != nil {
-					return nil, fmt.Errorf("Atomic Test is not currently bundled")
-				}
-			}
-		}
+	if body, err := include.ReadFile("include/custom/" + tid + "/" + tid + ".yaml"); err == nil {
+		return body, "include/custom/", nil
 	}
 
-	return body, nil
+	if body, err := include.ReadFile("include/custom/" + tid + "/" + tid + ".yml"); err == nil {
+		return body, "include/custom/", nil
+	}
+
+	if body, err := include.ReadFile("include/atomics/" + tid + "/" + tid + ".yaml"); err == nil {
+		return body, "include/atomics/", nil
+	}
+
+	if body, err := include.ReadFile("include/atomics/" + tid + "/" + tid + ".yml"); err == nil {
+		return body, "include/atomics/", nil
+	}
+
+	return nil, "", fmt.Errorf("Atomic Test is not currently bundled")
 }
 
 func Markdown(tid string) ([]byte, error) {

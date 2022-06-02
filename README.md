@@ -38,3 +38,17 @@ Obviously, Golang needs to be installed locally in order to build.
 
 Note: This execution framwork works on Windows, MacOS, and Linux (assuming
 it's cross-compiled).
+
+## Using Assets Provided With An Atomic
+
+Sometimes, atomic tests need to bring their own tools or config files with them.
+This is supported, and a good example to reference is the atomic for
+`T1003.004`. To make use of `PsExec.exe` automatically as referenced in the
+test, it would simply need to be added to the `include/atomics/T1003.004/bin`
+directory before `go-atomicredteam` is rebuilt.
+
+The key is the `PathToAtomicsFolder` string included in the default argument for
+the `psexec_exe` input argument. This string will be replaced with the
+appropriate path, depending on if it's a default test, a custom test, or a local
+test. In this case it's a default test, so `PathToAtomicsFolder` is replaced
+with `include/atomics` before trying to access the file.

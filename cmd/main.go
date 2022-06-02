@@ -265,6 +265,15 @@ func main() {
 				return nil
 			}
 
+			var err error
+
+			art.TEMPDIR, err = os.MkdirTemp("", "goart-")
+			if err != nil {
+				return cli.Exit(err, 1)
+			}
+
+			defer os.RemoveAll(art.TEMPDIR)
+
 			test, err := art.Execute(tid, name, index, inputs, env)
 			if err != nil {
 				return cli.Exit(err, 1)

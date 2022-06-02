@@ -9,6 +9,8 @@ type Atomic struct {
 	AttackTechnique string       `yaml:"attack_technique"`
 	DisplayName     string       `yaml:"display_name"`
 	AtomicTests     []AtomicTest `yaml:"atomic_tests"`
+
+	BaseDir string `yaml:"-"`
 }
 
 type AtomicTest struct {
@@ -23,6 +25,8 @@ type AtomicTest struct {
 
 	Dependencies []Dependency    `yaml:"dependencies,omitempty"`
 	Executor     *AtomicExecutor `yaml:"executor"`
+
+	BaseDir string `yaml:"-"`
 }
 
 type InputArgument struct {
