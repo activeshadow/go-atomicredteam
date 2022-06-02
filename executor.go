@@ -181,9 +181,11 @@ func Execute(tid, name string, index int, inputs []string, env []string) (*types
 		return nil, err
 	}
 
-	Println("****** EXECUTOR RESULTS ******")
-	Println(results)
-	Println("******************************")
+	if test.Executor.Name != "manual" {
+		Println("****** EXECUTOR RESULTS ******")
+		Println(results)
+		Println("******************************")
+	}
 
 	for k, v := range test.InputArugments {
 		v.ExpectedValue = args[k]
@@ -442,6 +444,10 @@ func checkArgsAndGetDefaults(test *types.AtomicTest, inputs []string) (map[strin
 		updated = make(map[string]string)
 	)
 
+	if len(test.InputArugments) == 0 {
+		return updated, nil
+	}
+
 	for _, i := range inputs {
 		kv := strings.Split(i, "=")
 
@@ -452,7 +458,10 @@ func checkArgsAndGetDefaults(test *types.AtomicTest, inputs []string) (map[strin
 	}
 
 	Println("\nChecking arguments...")
-	Println("  - supplied on command line: " + strings.Join(keys, ", "))
+
+	if len(keys) > 0 {
+		Println("  - supplied on command line: " + strings.Join(keys, ", "))
+	}
 
 	for k, v := range test.InputArugments {
 		Println("  - checking for argument " + k)
@@ -516,6 +525,12 @@ func checkPlatform(test *types.AtomicTest) error {
 }
 
 func interpolateWithArgs(interpolatee, base string, args map[string]string, quiet bool) (string, error) {
+	interpolated := strings.TrimSpace(interpolatee)
+
+	if len(args) == 0 {
+		return interpolated, nil
+	}
+
 	prevQuiet := Quiet
 	Quiet = quiet
 
@@ -525,14 +540,10 @@ func interpolateWithArgs(interpolatee, base string, args map[string]string, quie
 
 	Println("\nInterpolating command with input arguments...")
 
-	interpolated := strings.TrimSpace(interpolatee)
-
 	for k, v := range args {
 		Printf("  - interpolating [#{%s}] => [%s]\n", k, v)
 
 		if AtomicsFolderRegex.MatchString(v) {
-			Println("TEMP DIR: " + TEMPDIR)
-
 			v = AtomicsFolderRegex.ReplaceAllString(v, "")
 			v = strings.ReplaceAll(v, `\`, `/`)
 			v = strings.TrimSuffix(base, "/") + "/" + v

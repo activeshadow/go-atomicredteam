@@ -1,6 +1,6 @@
 module actshad.dev/go-atomicredteam
 
-go 1.17
+go 1.18
 
 require (
 	github.com/charmbracelet/glamour v0.2.0
