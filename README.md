@@ -90,7 +90,8 @@ target for your OS.
 
 📝 Note: This execution framwork works on Windows, MacOS, and Linux (assuming it's cross-compiled).
 
-TODO: Add GIF
+[get_started](https://user-images.githubusercontent.com/1636709/172280657-7e8d49a3-28f5-4045-95e8-e19226fc7819.gif)
+
 
 Clone the project
 
