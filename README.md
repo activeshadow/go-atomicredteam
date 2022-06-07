@@ -103,6 +103,12 @@ Go to the project directory
   cd go-atomicredteam
 ```
 
+Optionally update dependencies
+
+```bash
+  go get -u && go mod tidy
+```
+
 Build ***goart***
 
 ```bash
