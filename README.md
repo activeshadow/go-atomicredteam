@@ -44,15 +44,16 @@ locally and within the executable, the local test will be used.
 ### :camera: Screenshots
 
 <p align="center">
-  <img width="890" alt="help" src="https://user-images.githubusercontent.com/1636709/172274747-b2a6d6c4-4171-4cd9-9e56-4215256bc193.png">
-
+  <img width="890" alt="help" src="https://user-images.githubusercontent.com/1636709/172281324-dcf448ab-a0fb-46af-903b-1ed18cd3147b.png">
 </p>
-
 
 <!-- Features -->
 ### :dart: Features
 
-- TODO Add Features
+- Standalone Atomic Red Team Executor
+- Supports Windows, MacOS, and Linux (assuming it's cross-compiled).
+- Makefile to download atomics to build **_goart_**
+
 <!-- Config Variables -->
 ### :key: Config Variables
 
@@ -87,8 +88,6 @@ This project uses Golang:
 To build ***goart*** for all operating systems, simply run `make release` from
 the root directory. Otherwise, run the appropriate `make bin/goart-<os>`
 target for your OS.
-
-📝 Note: This execution framwork works on Windows, MacOS, and Linux (assuming it's cross-compiled).
 
 [get_started](https://user-images.githubusercontent.com/1636709/172280657-7e8d49a3-28f5-4045-95e8-e19226fc7819.gif)
 
@@ -133,7 +132,7 @@ Run ***goart***
 
 ```bash
   # Run the goart command
-  goart do stuff
+  goart --help
 ```
 
 <!-- Running Tests -->
