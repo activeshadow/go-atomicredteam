@@ -79,7 +79,7 @@ with `include/atomics` before trying to access the file.
 This project uses Golang:
 
 - Following the [install instructions](https://go.dev/doc/install) to install Golang.
-- Optional: A test system to run ***goart***
+- Optional: A test system (e.g. VM, spare laptop, etc.) to run ***goart***
 
 <!-- Run Locally -->
 ### :running: Build: Go Package
@@ -104,10 +104,11 @@ Go to the project directory
   cd go-atomicredteam
 ```
 
-Optionally update dependencies
+Optionally update dependencies if receiving `//go:linkname must refer to declared function or variable` error
 
 ```bash
   go get -u && go mod tidy
+  go get -u golang.org/x/sys
 ```
 
 Build ***goart***
@@ -146,4 +147,4 @@ WIP: Run tests
 <!-- License -->
 ## :warning: License
 
-Distributed under the MIT License. See LICENSE.txt for more information.
+Distributed under the MIT License. See [LICENSE](LICENSE) for more information.
