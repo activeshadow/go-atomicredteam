@@ -89,7 +89,7 @@ To build ***goart*** for all operating systems, simply run `make release` from
 the root directory. Otherwise, run the appropriate `make bin/goart-<os>`
 target for your OS.
 
-[get_started](https://user-images.githubusercontent.com/1636709/172280657-7e8d49a3-28f5-4045-95e8-e19226fc7819.gif)
+![get_started](https://user-images.githubusercontent.com/1636709/172280657-7e8d49a3-28f5-4045-95e8-e19226fc7819.gif)
 
 
 Clone the project
