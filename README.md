@@ -121,18 +121,14 @@ Build ***goart***
   make bin/goart-<os>
 ```
 
-Run ***goart***
 
-```bash
-  goart --help
-```
 
 <!-- Usage -->
 ## :eyes: Usage
 
 ```bash
   # Run the goart command
-  goart --help
+  bin/goart --help
 ```
 
 <!-- Running Tests -->
@@ -141,7 +137,11 @@ Run ***goart***
 WIP: Run tests
 
 ```bash
-  go test
+  # run technique by name
+  bin/goart-darwin --technique T1006 --name "Read volume boot sector via DOS device path (PowerShell)"
+
+  # run technique by index (starts at 0)
+  bin/goart-darwin --technique T1006 --index 0
 ```
 
 <!-- License -->
