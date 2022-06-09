@@ -134,8 +134,6 @@ Build ***goart***
 <!-- Running Tests -->
 ### :test_tube: Running Tests
 
-WIP: Run tests
-
 ```bash
   # run technique by name
   bin/goart-darwin --technique T1006 --name "Read volume boot sector via DOS device path (PowerShell)"
