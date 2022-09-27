@@ -3,3 +3,4 @@
 bin
 include/atomics
 include/custom
+.vscode/*

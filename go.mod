@@ -7,7 +7,7 @@ require (
 	github.com/muesli/termenv v0.6.0
 	github.com/urfave/cli/v2 v2.2.0
 	golang.org/x/net v0.0.0-20190620200207-3b0461eec859 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20200506231410-2ff61e1afc86
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -25,5 +25,5 @@ require (
 	github.com/russross/blackfriday/v2 v2.0.1 // indirect
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
 	github.com/yuin/goldmark v1.2.0 // indirect
-	golang.org/x/sys v0.0.0-20200413165638-669c56c373c4 // indirect
+	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a // indirect
 )
